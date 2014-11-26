@@ -264,8 +264,8 @@ OPAL_THREAD_ADD32(volatile int32_t *addr, int delta)
 {
     int32_t ret;
 
-    if (OPAL_UNLIKELY(opal_using_threads())) {
-        ret = opal_atomic_add_32(addr, delta);
+    if (opal_using_threads()) {
+        ret = delta + opal_atomic_add_32(addr, delta);
     } else {
         ret = (*addr += delta);
     }
@@ -279,8 +279,8 @@ OPAL_THREAD_ADD64(volatile int64_t *addr, int delta)
 {
     int64_t ret;
 
-    if (OPAL_UNLIKELY(opal_using_threads())) {
-        ret = opal_atomic_add_64(addr, delta);
+    if (opal_using_threads()) {
+        ret = delta + opal_atomic_add_64(addr, delta);
     } else {
         ret = (*addr += delta);
     }
@@ -294,8 +294,8 @@ OPAL_THREAD_ADD_SIZE_T(volatile size_t *addr, int delta)
 {
     size_t ret;
 
-    if (OPAL_UNLIKELY(opal_using_threads())) {
-        ret = opal_atomic_add_size_t(addr, delta);
+    if (opal_using_threads()) {
+        ret = delta += opal_atomic_add_size_t(addr, delta);
     } else {
         ret = (*addr += delta);
     }
@@ -304,23 +304,21 @@ OPAL_THREAD_ADD_SIZE_T(volatile size_t *addr, int delta)
 }
 
 /* BWB: FIX ME: remove if possible */
-#define OPAL_CMPSET(x, y, z) ((*(x) == (y)) ? ((*(x) = (z)), 1) : 0)
+#define OPAL_CMPSET(x, y, z) ((*(x) == (y)) ? ((*(x) = (z)), (y)) : (*(x)))
 
 #if OPAL_HAVE_ATOMIC_CMPSET_32
 #define OPAL_ATOMIC_CMPSET_32(x, y, z) \
-    (OPAL_UNLIKELY(opal_using_threads()) ? opal_atomic_cmpset_32(x, y, z) : OPAL_CMPSET(x, y, z))
+    (((int32_t)(y)) == (opal_using_threads() ? opal_atomic_cmpset_32(x, (int32_t)(y), (int32_t)(z)) \
+                                             : OPAL_CMPSET(x, (int32_t)(y), (int32_t)(z))))
 #endif
 #if OPAL_HAVE_ATOMIC_CMPSET_64
 #define OPAL_ATOMIC_CMPSET_64(x, y, z) \
-    (OPAL_UNLIKELY(opal_using_threads()) ? opal_atomic_cmpset_64(x, y, z) : OPAL_CMPSET(x, y, z))
+    (((int64_t)(y)) == (opal_using_threads() ? opal_atomic_cmpset_64(x, (int64_t)(y), (int64_t)(z)) \
+                                             : OPAL_CMPSET(x, (int64_t)(y), (int64_t)(z))))
 #endif
 #if OPAL_HAVE_ATOMIC_CMPSET_32 || OPAL_HAVE_ATOMIC_CMPSET_64
 #define OPAL_ATOMIC_CMPSET(x, y, z) \
-    (OPAL_UNLIKELY(opal_using_threads()) ? opal_atomic_cmpset(x, y, z) : OPAL_CMPSET(x, y, z))
-#endif
-#if OPAL_HAVE_ATOMIC_CMPSET_32 || OPAL_HAVE_ATOMIC_CMPSET_64
-#define OPAL_ATOMIC_CMPSET_PTR(x, y, z) \
-    (opal_using_threads() ? opal_atomic_cmpset_ptr(x, y, z) : OPAL_CMPSET(x, y, z))
+    ((y) == (opal_using_threads() ? opal_atomic_cmpset(x, (y), (z)) : OPAL_CMPSET(x, (y), (z))))
 #endif
 
 
